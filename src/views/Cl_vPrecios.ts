@@ -358,127 +358,200 @@ export default class Cl_vPrecios implements I_vPrecios {
 
   private descargarPDF(): void {
     if (this.preciosCache.length === 0) {
-      this.mostrarToast("No hay precios en el catálogo para exportar.", "error");
+      this.mostrarToast("No hay precios en el cat\u00e1logo para exportar.", "error");
       return;
     }
 
     const { jsPDF } = (window as any).jspdf;
 
-    // Ancho de ticket tipo móvil (85mm), alto dinámico
-    const ancho = 85;
-    const margen = 5;
-    const contenido = ancho - margen * 2;
+    const W       = 90;
+    const mg      = 6;
+    const cw      = W - mg * 2;
+    const rowH    = 17;
+    const headerH = 42;
+    const footerH = 34;
+    const H = headerH + (this.preciosCache.length * rowH) + 28 + footerH;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [W, H] });
 
     const hoy = new Date().toLocaleDateString("es-VE", {
       day: "2-digit", month: "2-digit", year: "numeric"
     });
 
-    // Calcular alto necesario: encabezado(38) + filas(14 c/u) + pie(30)
-    const altoEstimado = 38 + (this.preciosCache.length * 14) + 45;
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [ancho, altoEstimado] });
-
-    const azul   = [2, 132, 199]   as [number, number, number];
-    const oscuro = [15, 23, 42]    as [number, number, number];
-    const gris   = [100, 116, 139] as [number, number, number];
-    const blanco = [255, 255, 255] as [number, number, number];
-    const verde  = [16, 185, 129]  as [number, number, number];
+    type RGB = [number, number, number];
+    const navy:     RGB = [15,  23,  42];
+    const azul:     RGB = [2,  132, 199];
+    const azulClr:  RGB = [56, 189, 248];
+    const verde:    RGB = [16, 185, 129];
+    const verdeClr: RGB = [167,243,208];
+    const gris:     RGB = [100,116,139];
+    const grisClr:  RGB = [226,232,240];
+    const grisBg:   RGB = [248,250,252];
+    const blanco:   RGB = [255,255,255];
+    const dorado:   RGB = [251,191, 36];
 
     let y = 0;
 
-    // ── Encabezado azul ──
+    // =========== HEADER ===========
+    // Fondo navy completo
+    doc.setFillColor(...navy);
+    doc.rect(0, 0, W, headerH, "F");
+    // Barra lateral azul
     doc.setFillColor(...azul);
-    doc.rect(0, 0, ancho, 28, "F");
-    doc.setTextColor(...blanco);
-    doc.setFontSize(11);
+    doc.rect(0, 0, 4, headerH, "F");
+    // Franja dorada inferior del header
+    doc.setFillColor(...dorado);
+    doc.rect(0, headerH - 2, W, 2, "F");
+    // Circulo logo "TR"
+    doc.setFillColor(...azulClr);
+    doc.circle(16, 14, 7, "F");
+    doc.setTextColor(...navy);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("LISTA DE PRECIOS", ancho / 2, 9, { align: "center" });
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text("Taller de Reparaciones", ancho / 2, 15, { align: "center" });
+    doc.text("TR", 16, 16.5, { align: "center" });
+    // Titulo
+    doc.setTextColor(...blanco);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("LISTA DE PRECIOS", 26, 11);
     doc.setFontSize(7);
-    doc.text(`Fecha: ${hoy}`, ancho / 2, 20, { align: "center" });
-    doc.text(`Tasa BCV: Bs. ${this.tasaActualCache.toFixed(2)}`, ancho / 2, 25, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...azulClr);
+    doc.text("Taller de Reparaciones", 26, 17);
+    // Chips Fecha / Tasa
+    doc.setFillColor(30, 41, 59);
+    doc.roundedRect(mg, 23, (cw / 2) - 1, 11, 2, 2, "F");
+    doc.roundedRect(mg + (cw / 2) + 1, 23, (cw / 2) - 1, 11, 2, 2, "F");
+    // Chip fecha
+    doc.setTextColor(...gris);
+    doc.setFontSize(5.5);
+    doc.setFont("helvetica", "normal");
+    doc.text("FECHA", mg + (cw / 4), 27, { align: "center" });
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...blanco);
+    doc.text(hoy, mg + (cw / 4), 31.5, { align: "center" });
+    // Chip tasa
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.5);
+    doc.setTextColor(...gris);
+    doc.text("TASA BCV", mg + (cw * 3 / 4) + 1, 27, { align: "center" });
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dorado);
+    doc.text(`Bs. ${this.tasaActualCache.toFixed(2)}`, mg + (cw * 3 / 4) + 1, 31.5, { align: "center" });
 
-    y = 33;
+    y = headerH + 5;
 
-    // ── Línea divisoria ──
-    doc.setDrawColor(...gris);
-    doc.setLineWidth(0.3);
-    doc.line(margen, y, ancho - margen, y);
-    y += 5;
-
-    // ── Filas de precios (una por línea, estilo tarjeta) ──
+    // =========== FILAS DE PRECIOS ===========
     this.preciosCache.forEach((item, index) => {
-      // Fondo alterno suave
-      if (index % 2 === 0) {
-        doc.setFillColor(241, 245, 249);
-        doc.rect(margen, y - 3.5, contenido, 12, "F");
+      const esPar = index % 2 === 0;
+      // Fondo alterno
+      if (esPar) {
+        doc.setFillColor(...grisBg);
+        doc.rect(mg, y - 1.5, cw, rowH - 0.5, "F");
       }
-
-      // Nombre del artículo
-      doc.setTextColor(...oscuro);
+      // Borde lateral de color
+      doc.setFillColor(...(esPar ? azul : verde));
+      doc.rect(mg, y - 1.5, 2.5, rowH - 0.5, "F");
+      // Numero
+      doc.setTextColor(...gris);
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.text(`#${index + 1}`, mg + 4.5, y + 2.5);
+      // Nombre
+      doc.setTextColor(...navy);
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      const nombre = item.producto.length > 28 ? item.producto.substring(0, 28) + "..." : item.producto;
-      doc.text(nombre, margen + 1, y + 1);
-
-      // Precios USD y Bs en la misma fila
+      const nombre = item.producto.length > 27 ? item.producto.substring(0, 27) + "\u2026" : item.producto;
+      doc.text(nombre, mg + 4.5, y + 8.5);
+      // Chip USD
       const bs = item.calcularPrecioBs(this.tasaActualCache);
+      doc.setFillColor(...azul);
+      doc.roundedRect(mg + 4, y + 10, 23, 5, 1.5, 1.5, "F");
+      doc.setTextColor(...blanco);
       doc.setFontSize(7.5);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...azul);
-      doc.text(`$${item.precioUsd.toFixed(2)}`, margen + 1, y + 6.5);
-      doc.setTextColor(...verde);
-      doc.text(`Bs. ${bs.toFixed(2)}`, ancho - margen, y + 6.5, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.text(`$ ${item.precioUsd.toFixed(2)}`, mg + 15.5, y + 14, { align: "center" });
+      // Chip Bs
+      doc.setFillColor(...verde);
+      doc.roundedRect(W - mg - 29, y + 10, 29, 5, 1.5, 1.5, "F");
+      doc.setTextColor(...blanco);
+      doc.text(`Bs. ${bs.toFixed(2)}`, W - mg - 14.5, y + 14, { align: "center" });
+      // Linea separadora sutil
+      doc.setDrawColor(...grisClr);
+      doc.setLineWidth(0.15);
+      doc.line(mg, y + rowH - 2, W - mg, y + rowH - 2);
 
-      y += 14;
+      y += rowH;
     });
 
-    // ── Separador total ──
-    y += 1;
-    doc.setDrawColor(...azul);
-    doc.setLineWidth(0.5);
-    doc.line(margen, y, ancho - margen, y);
-    y += 5;
+    // =========== TOTAL ===========
+    y += 4;
+    // Linea punteada decorativa
+    doc.setDrawColor(...grisClr);
+    doc.setLineWidth(0.2);
+    for (let x = mg; x < W - mg; x += 3.5) {
+      doc.line(x, y, x + 2, y);
+    }
+    y += 6;
 
-    // ── Total ──
     const totalUsd = this.preciosCache.reduce((a, p) => a + p.precioUsd, 0);
     const totalBs  = totalUsd * this.tasaActualCache;
-    doc.setFillColor(...oscuro);
-    doc.rect(margen, y - 3.5, contenido, 12, "F");
-    doc.setTextColor(...blanco);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("TOTAL CATALOGO", margen + 1, y + 1);
-    doc.setTextColor(147, 231, 195);
-    doc.setFontSize(8);
-    doc.text(`$${totalUsd.toFixed(2)}`, margen + 1, y + 6.5);
-    doc.setTextColor(147, 197, 253);
-    doc.text(`Bs. ${totalBs.toFixed(2)}`, ancho - margen, y + 6.5, { align: "right" });
-    y += 17;
 
-    // ── Pie de página ──
-    doc.setDrawColor(...gris);
-    doc.setLineWidth(0.2);
-    doc.line(margen, y, ancho - margen, y);
-    y += 5;
+    // Caja de total estilo premium
+    doc.setFillColor(...navy);
+    doc.roundedRect(mg, y, cw, 15, 3, 3, "F");
+    // Acento lateral azul
+    doc.setFillColor(...azul);
+    doc.roundedRect(mg, y, 4, 15, 2, 2, "F");
+    // Label
     doc.setTextColor(...gris);
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-    doc.text("Pago: Efectivo / Pago Movil", ancho / 2, y, { align: "center" });
-    y += 4;
-    doc.text("Garantia: 30 dias de reparacion", ancho / 2, y, { align: "center" });
-    y += 4;
-    doc.text("Ubicacion: Calle 33 con Carrera 23", ancho / 2, y, { align: "center" });
-    y += 5;
     doc.setFontSize(6);
+    doc.setFont("helvetica", "normal");
+    doc.text("TOTAL DEL CATALOGO", mg + 7, y + 5.5);
+    // Montos
+    doc.setFontSize(9.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...azulClr);
+    doc.text(`$${totalUsd.toFixed(2)}`, mg + 7, y + 12);
+    doc.setTextColor(...verdeClr);
+    doc.text(`Bs. ${totalBs.toFixed(2)}`, W - mg, y + 12, { align: "right" });
+    y += 22;
+
+    // =========== FOOTER ===========
+    doc.setFillColor(...grisBg);
+    doc.rect(0, y, W, footerH, "F");
+    // Linea azul superior del footer
+    doc.setFillColor(...azul);
+    doc.rect(0, y, W, 1.8, "F");
+    y += 8;
+    doc.setTextColor(...navy);
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.text("Metodos de Pago", W / 2, y, { align: "center" });
+    y += 4.5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...gris);
+    doc.text("Efectivo  /  Pago Movil", W / 2, y, { align: "center" });
+    y += 5.5;
+    doc.setTextColor(...navy);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.text("Garantia: 30 dias", W / 2, y, { align: "center" });
+    y += 4.5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...gris);
+    doc.text("Calle 33 con Carrera 23", W / 2, y, { align: "center" });
+    y += 5;
+    doc.setFontSize(5.5);
     doc.setFont("helvetica", "italic");
-    doc.text("*Precios sujetos a tasa BCV del dia del pago*", ancho / 2, y, { align: "center" });
+    doc.text("* Precios en USD. Bs. sujetos a tasa BCV del dia del pago *", W / 2, y, { align: "center" });
 
     doc.save(`Precios-Reparacion-${hoy.replace(/\//g, "-")}.pdf`);
     this.mostrarToast("PDF descargado exitosamente.", "exito");
   }
-
 
   private enviarPresupuestoWhatsApp(): void {
     if (this.seleccionadosQuote.size === 0) return;
