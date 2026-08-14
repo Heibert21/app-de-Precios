@@ -878,3 +878,43 @@ input:focus {
     page-break-inside: avoid;
   }
 }
+
+.filtro-precio-container {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.input-precio-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  padding: 10px 16px;
+  min-height: 44px;
+}
+
+.input-precio-group label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--texto-mutated);
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.input-precio-group input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--texto-oscuro);
+  outline: none;
+}
+
+.input-precio-group input::placeholder {
+  color: #94a3b8;
+}

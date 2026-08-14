@@ -17,6 +17,10 @@ export default class Cl_vPrecios {
     inputBuscar;
     selectOrden;
     btnExportarPdf;
+    inputPrecioMin;
+    inputPrecioMax;
+    precioMinFiltro = null;
+    precioMaxFiltro = null;
     // Cotizador Rápido
     cotizacionBar;
     cotizacionCantNum;
@@ -64,6 +68,8 @@ export default class Cl_vPrecios {
         this.inputBuscar = document.getElementById("buscar-input");
         this.selectOrden = document.getElementById("select-orden");
         this.btnExportarPdf = document.getElementById("btn-exportar-pdf");
+        this.inputPrecioMin = document.getElementById("buscar-precio-min");
+        this.inputPrecioMax = document.getElementById("buscar-precio-max");
         // Cotizador bar
         this.cotizacionBar = document.getElementById("cotizacion-bar");
         this.cotizacionCantNum = document.getElementById("cotizacion-cant-num");
@@ -118,6 +124,21 @@ export default class Cl_vPrecios {
         if (this.inputBuscar) {
             this.inputBuscar.addEventListener("input", () => {
                 this.textoBusqueda = this.inputBuscar?.value.trim().toLowerCase() || "";
+                this.refrescarListaPrecios();
+            });
+        }
+        // Eventos Filtro Rango de Precios
+        if (this.inputPrecioMin) {
+            this.inputPrecioMin.addEventListener("input", () => {
+                const val = parseFloat(this.inputPrecioMin?.value || "");
+                this.precioMinFiltro = isNaN(val) ? null : val;
+                this.refrescarListaPrecios();
+            });
+        }
+        if (this.inputPrecioMax) {
+            this.inputPrecioMax.addEventListener("input", () => {
+                const val = parseFloat(this.inputPrecioMax?.value || "");
+                this.precioMaxFiltro = isNaN(val) ? null : val;
                 this.refrescarListaPrecios();
             });
         }
@@ -236,6 +257,13 @@ export default class Cl_vPrecios {
         if (this.textoBusqueda) {
             filtrados = filtrados.filter((p) => p.producto.toLowerCase().includes(this.textoBusqueda));
         }
+        // 1.1. Filtrar por rango de precios (USD)
+        if (this.precioMinFiltro !== null) {
+            filtrados = filtrados.filter((p) => p.precioUsd >= this.precioMinFiltro);
+        }
+        if (this.precioMaxFiltro !== null) {
+            filtrados = filtrados.filter((p) => p.precioUsd <= this.precioMaxFiltro);
+        }
         // 2. Aplicar Ordenamiento
         if (this.ordenActivo === "precio-asc") {
             filtrados.sort((a, b) => a.precioUsd - b.precioUsd);
@@ -327,7 +355,7 @@ export default class Cl_vPrecios {
         const rowH = 17;
         const headerH = 42;
         const footerH = 34;
-        const H = headerH + (this.preciosCache.length * rowH) + 28 + footerH;
+        const H = headerH + (this.preciosCache.length * rowH) + 6 + footerH;
         const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [W, H] });
         const hoy = new Date().toLocaleDateString("es-VE", {
             day: "2-digit", month: "2-digit", year: "numeric"
@@ -353,13 +381,27 @@ export default class Cl_vPrecios {
         // Franja dorada inferior del header
         doc.setFillColor(...dorado);
         doc.rect(0, headerH - 2, W, 2, "F");
-        // Circulo logo "TR"
-        doc.setFillColor(...azulClr);
-        doc.circle(16, 14, 7, "F");
-        doc.setTextColor(...navy);
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.text("TR", 16, 16.5, { align: "center" });
+        // Intentar agregar el logo de la cabecera HTML
+        let logoCargado = false;
+        try {
+            const logoEl = document.querySelector(".header-logo");
+            if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
+                doc.addImage(logoEl, "JPEG", 9, 7, 14, 14);
+                logoCargado = true;
+            }
+        }
+        catch (e) {
+            console.warn("No se pudo incrustar el logo en el PDF por politicas CORS:", e);
+        }
+        if (!logoCargado) {
+            // Circulo logo "TR" alternativo
+            doc.setFillColor(...azulClr);
+            doc.circle(16, 14, 7, "F");
+            doc.setTextColor(...navy);
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "bold");
+            doc.text("TR", 16, 16.5, { align: "center" });
+        }
         // Titulo
         doc.setTextColor(...blanco);
         doc.setFontSize(12);
@@ -433,36 +475,6 @@ export default class Cl_vPrecios {
             doc.line(mg, y + rowH - 2, W - mg, y + rowH - 2);
             y += rowH;
         });
-        // =========== TOTAL ===========
-        y += 4;
-        // Linea punteada decorativa
-        doc.setDrawColor(...grisClr);
-        doc.setLineWidth(0.2);
-        for (let x = mg; x < W - mg; x += 3.5) {
-            doc.line(x, y, x + 2, y);
-        }
-        y += 6;
-        const totalUsd = this.preciosCache.reduce((a, p) => a + p.precioUsd, 0);
-        const totalBs = totalUsd * this.tasaActualCache;
-        // Caja de total estilo premium
-        doc.setFillColor(...navy);
-        doc.roundedRect(mg, y, cw, 15, 3, 3, "F");
-        // Acento lateral azul
-        doc.setFillColor(...azul);
-        doc.roundedRect(mg, y, 4, 15, 2, 2, "F");
-        // Label
-        doc.setTextColor(...gris);
-        doc.setFontSize(6);
-        doc.setFont("helvetica", "normal");
-        doc.text("TOTAL DEL CATALOGO", mg + 7, y + 5.5);
-        // Montos
-        doc.setFontSize(9.5);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...azulClr);
-        doc.text(`$${totalUsd.toFixed(2)}`, mg + 7, y + 12);
-        doc.setTextColor(...verdeClr);
-        doc.text(`Bs. ${totalBs.toFixed(2)}`, W - mg, y + 12, { align: "right" });
-        y += 22;
         // =========== FOOTER ===========
         doc.setFillColor(...grisBg);
         doc.rect(0, y, W, footerH, "F");
