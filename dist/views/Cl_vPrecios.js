@@ -128,10 +128,10 @@ export default class Cl_vPrecios {
                 this.refrescarListaPrecios();
             });
         }
-        // Evento Exportar a PDF / Imprimir
+        // Evento Descargar PDF
         if (this.btnExportarPdf) {
             this.btnExportarPdf.addEventListener("click", () => {
-                window.print();
+                this.descargarPDF();
             });
         }
         // Evento Enviar por WhatsApp
@@ -314,6 +314,95 @@ export default class Cl_vPrecios {
             this.cotizacionTotalUsd.textContent = `$${totalUsd.toFixed(2)}`;
         if (this.cotizacionTotalBs)
             this.cotizacionTotalBs.textContent = `Bs. ${totalBs.toFixed(2)}`;
+    }
+    descargarPDF() {
+        if (this.preciosCache.length === 0) {
+            this.mostrarToast("No hay precios en el catálogo para exportar.", "error");
+            return;
+        }
+        // Acceder a jsPDF desde CDN (global window.jspdf)
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        const hoy = new Date().toLocaleDateString("es-VE", {
+            day: "2-digit", month: "2-digit", year: "numeric"
+        });
+        const azul = [2, 132, 199];
+        const oscuro = [15, 23, 42];
+        const gris = [100, 116, 139];
+        const blanco = [255, 255, 255];
+        // ----- Encabezado -----
+        doc.setFillColor(...azul);
+        doc.rect(0, 0, 210, 28, "F");
+        doc.setTextColor(...blanco);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("LISTA DE PRECIOS DE REPARACION", 105, 12, { align: "center" });
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Tasa BCV del dia: Bs. ${this.tasaActualCache.toFixed(2)}   |   Fecha: ${hoy}`, 105, 20, { align: "center" });
+        // ----- Cabecera de la tabla -----
+        let y = 36;
+        doc.setFillColor(15, 23, 42);
+        doc.rect(10, y - 5, 190, 9, "F");
+        doc.setTextColor(...blanco);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("#", 14, y);
+        doc.text("Articulo / Servicio", 22, y);
+        doc.text("USD", 140, y, { align: "right" });
+        doc.text("Bolivares (Bs.)", 198, y, { align: "right" });
+        y += 6;
+        // ----- Filas de precios -----
+        doc.setFont("helvetica", "normal");
+        this.preciosCache.forEach((item, index) => {
+            if (y > 270) {
+                doc.addPage();
+                y = 20;
+            }
+            const esPar = index % 2 === 0;
+            if (esPar) {
+                doc.setFillColor(241, 245, 249);
+                doc.rect(10, y - 4, 190, 7, "F");
+            }
+            const bs = item.calcularPrecioBs(this.tasaActualCache);
+            doc.setTextColor(...oscuro);
+            doc.setFontSize(8.5);
+            doc.text(String(index + 1), 14, y);
+            doc.text(item.producto.substring(0, 60), 22, y);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(2, 132, 199);
+            doc.text(`$${item.precioUsd.toFixed(2)}`, 140, y, { align: "right" });
+            doc.setTextColor(16, 185, 129);
+            doc.text(`Bs. ${bs.toFixed(2)}`, 198, y, { align: "right" });
+            doc.setFont("helvetica", "normal");
+            y += 7;
+        });
+        // ----- Línea separadora + Total -----
+        y += 3;
+        doc.setDrawColor(...azul);
+        doc.setLineWidth(0.5);
+        doc.line(10, y, 200, y);
+        y += 6;
+        const totalUsd = this.preciosCache.reduce((a, p) => a + p.precioUsd, 0);
+        const totalBs = totalUsd * this.tasaActualCache;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...oscuro);
+        doc.text(`Total Catálogo:`, 22, y);
+        doc.setTextColor(...azul);
+        doc.text(`$${totalUsd.toFixed(2)}`, 140, y, { align: "right" });
+        doc.setTextColor(16, 185, 129);
+        doc.text(`Bs. ${totalBs.toFixed(2)}`, 198, y, { align: "right" });
+        // ----- Pie de página -----
+        y += 12;
+        doc.setFontSize(7.5);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(...gris);
+        doc.text("Calle 33 con Carrera 23  |  Pago: Efectivo / Pago Movil  |  Garantia: 30 dias", 105, y, { align: "center" });
+        y += 5;
+        doc.text("Precios en USD. El monto en Bs. esta sujeto a la tasa BCV del dia del pago.", 105, y, { align: "center" });
+        doc.save(`Precios-Reparacion-${hoy.replace(/\//g, "-")}.pdf`);
+        this.mostrarToast("PDF descargado exitosamente.", "exito");
     }
     enviarPresupuestoWhatsApp() {
         if (this.seleccionadosQuote.size === 0)
