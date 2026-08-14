@@ -5,7 +5,7 @@ export default class Cl_sMockApi {
    */
   protected static getUri(tabla: string): string {
     const urls: Record<string, string> = {
-      precios: "https://6a7f2e923183f5fd884af4a0.mockapi.io/precios"
+      precios: "https://6a7f388e3183f5fd884af9cd.mockapi.io/precios"
     };
     return urls[tabla] || "";
   }
