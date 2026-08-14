@@ -27,6 +27,7 @@ export default class Cl_vPrecios implements I_vPrecios {
   private cotizacionTotalUsd: HTMLElement | null;
   private cotizacionTotalBs: HTMLElement | null;
   private btnEnviarWhatsapp: HTMLButtonElement | null;
+  private btnLimpiarSeleccion: HTMLButtonElement | null;
   private seleccionadosQuote: Map<string, Cl_mPrecio> = new Map();
 
   // Estado interno de vista
@@ -51,7 +52,7 @@ export default class Cl_vPrecios implements I_vPrecios {
     this.inProducto = document.getElementById("producto") as HTMLInputElement;
     this.inPrecioUsd = document.getElementById("precio-usd") as HTMLInputElement;
     this.btnSubmit = this.formPrecio.querySelector('button[type="submit"]') as HTMLButtonElement;
-    
+
     // Crear o referenciar botón de cancelar edición
     let btnCancel = document.getElementById("btn-cancelar-edicion") as HTMLButtonElement;
     if (!btnCancel) {
@@ -80,6 +81,7 @@ export default class Cl_vPrecios implements I_vPrecios {
     this.cotizacionTotalUsd = document.getElementById("cotizacion-total-usd");
     this.cotizacionTotalBs = document.getElementById("cotizacion-total-bs");
     this.btnEnviarWhatsapp = document.getElementById("btn-enviar-whatsapp") as HTMLButtonElement;
+    this.btnLimpiarSeleccion = document.getElementById("btn-limpiar-seleccion") as HTMLButtonElement;
 
     // Contenedor Toasts
     let container = document.getElementById("toast-container");
@@ -157,6 +159,13 @@ export default class Cl_vPrecios implements I_vPrecios {
       });
     }
 
+    // Evento Limpiar Selección
+    if (this.btnLimpiarSeleccion) {
+      this.btnLimpiarSeleccion.addEventListener("click", () => {
+        this.limpiarSeleccion();
+      });
+    }
+
     // Delegación de eventos para editar, eliminar y selección de checkboxes (cotizador)
     this.listaPreciosEl.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
@@ -220,7 +229,7 @@ export default class Cl_vPrecios implements I_vPrecios {
     this.editandoId = precio.id;
     this.inProducto.value = precio.producto;
     this.inPrecioUsd.value = precio.precioUsd.toString();
-    
+
     if (this.tituloForm) this.tituloForm.textContent = "✏️ Editar Precio de Reparación";
     this.btnSubmit.textContent = "💾 Actualizar Cambios";
     this.btnCancelarEdicion.classList.remove("oculto");
@@ -315,6 +324,15 @@ export default class Cl_vPrecios implements I_vPrecios {
     });
   }
 
+  private limpiarSeleccion(): void {
+    this.seleccionadosQuote.clear();
+    // Desmarcar todos los checkboxes visibles
+    const checkboxes = this.listaPreciosEl.querySelectorAll<HTMLInputElement>(".checkbox-item");
+    checkboxes.forEach(cb => { cb.checked = false; });
+    this.actualizarBarraCotizacion();
+    this.mostrarToast("Selección limpiada.", "info");
+  }
+
   private actualizarBarraCotizacion(): void {
     if (!this.cotizacionBar) return;
 
@@ -341,8 +359,18 @@ export default class Cl_vPrecios implements I_vPrecios {
   private enviarPresupuestoWhatsApp(): void {
     if (this.seleccionadosQuote.size === 0) return;
 
+    // Fecha actual formateada
+    const hoy = new Date();
+    const fechaFormateada = hoy.toLocaleDateString("es-VE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+
     let totalUsd = 0;
-    let lineas = `📋 *PRESUPUESTO DE REPARACIÓN*\n----------------------------------\n`;
+    let lineas = `📋 *PRESUPUESTO DE REPARACIÓN*\n`;
+    lineas += `📅 *Fecha:* ${fechaFormateada}\n`;
+    lineas += `----------------------------------\n`;
 
     this.seleccionadosQuote.forEach((item) => {
       const bs = item.calcularPrecioBs(this.tasaActualCache);
@@ -357,7 +385,14 @@ export default class Cl_vPrecios implements I_vPrecios {
     lineas += `💵 *TOTAL USD:* $${totalUsd.toFixed(2)}\n`;
     lineas += `🇻🇪 *TOTAL BS:* Bs. ${totalBs.toFixed(2)}\n`;
     lineas += `📊 *Tasa BCV del día:* Bs. ${this.tasaActualCache.toFixed(2)}\n\n`;
-    lineas += `_¡Gracias por su preferencia!_ 🛠️`;
+    lineas += `⚠️ *Nota:* Presupuesto sujeto a la tasa oficial del dólar del día en que se realice el pago (el monto en bolívares está sujeto a cambios diarios).\n\n`;
+    lineas += `----------------------------------\n`;
+    lineas += `💳 *Métodos de Pago Aceptados:*\n`;
+    lineas += `   • Efectivo\n`;
+    lineas += `   • Pago Móvil\n\n`;
+    lineas += `🔧 *Garantía:* 30 días sobre la reparación realizada.\n\n`;
+    lineas += `📍 *Ubicación:* Calle 33 con Carrera 23\n\n`;
+    lineas += `_¡Gracias por preferirnos!_ 🛠️`;
 
     const mensajeEncoded = encodeURIComponent(lineas);
     const urlWhatsApp = `https://api.whatsapp.com/send?text=${mensajeEncoded}`;
@@ -405,7 +440,7 @@ export default class Cl_vPrecios implements I_vPrecios {
   public mostrarToast(mensaje: string, tipo: "exito" | "error" | "info" = "info"): void {
     const toast = document.createElement("div");
     toast.className = `toast toast-${tipo}`;
-    
+
     let icono = "ℹ️";
     if (tipo === "exito") icono = "✅";
     if (tipo === "error") icono = "⚠️";

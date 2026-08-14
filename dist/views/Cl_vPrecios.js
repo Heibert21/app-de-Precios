@@ -23,6 +23,7 @@ export default class Cl_vPrecios {
     cotizacionTotalUsd;
     cotizacionTotalBs;
     btnEnviarWhatsapp;
+    btnLimpiarSeleccion;
     seleccionadosQuote = new Map();
     // Estado interno de vista
     editandoId = null;
@@ -69,6 +70,7 @@ export default class Cl_vPrecios {
         this.cotizacionTotalUsd = document.getElementById("cotizacion-total-usd");
         this.cotizacionTotalBs = document.getElementById("cotizacion-total-bs");
         this.btnEnviarWhatsapp = document.getElementById("btn-enviar-whatsapp");
+        this.btnLimpiarSeleccion = document.getElementById("btn-limpiar-seleccion");
         // Contenedor Toasts
         let container = document.getElementById("toast-container");
         if (!container) {
@@ -136,6 +138,12 @@ export default class Cl_vPrecios {
         if (this.btnEnviarWhatsapp) {
             this.btnEnviarWhatsapp.addEventListener("click", () => {
                 this.enviarPresupuestoWhatsApp();
+            });
+        }
+        // Evento Limpiar Selección
+        if (this.btnLimpiarSeleccion) {
+            this.btnLimpiarSeleccion.addEventListener("click", () => {
+                this.limpiarSeleccion();
             });
         }
         // Delegación de eventos para editar, eliminar y selección de checkboxes (cotizador)
@@ -278,6 +286,14 @@ export default class Cl_vPrecios {
             this.listaPreciosEl.appendChild(div);
         });
     }
+    limpiarSeleccion() {
+        this.seleccionadosQuote.clear();
+        // Desmarcar todos los checkboxes visibles
+        const checkboxes = this.listaPreciosEl.querySelectorAll(".checkbox-item");
+        checkboxes.forEach(cb => { cb.checked = false; });
+        this.actualizarBarraCotizacion();
+        this.mostrarToast("Selección limpiada.", "info");
+    }
     actualizarBarraCotizacion() {
         if (!this.cotizacionBar)
             return;
@@ -302,8 +318,17 @@ export default class Cl_vPrecios {
     enviarPresupuestoWhatsApp() {
         if (this.seleccionadosQuote.size === 0)
             return;
+        // Fecha actual formateada
+        const hoy = new Date();
+        const fechaFormateada = hoy.toLocaleDateString("es-VE", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        });
         let totalUsd = 0;
-        let lineas = `📋 *PRESUPUESTO DE REPARACIÓN*\n----------------------------------\n`;
+        let lineas = `📋 *PRESUPUESTO DE REPARACIÓN*\n`;
+        lineas += `📅 *Fecha:* ${fechaFormateada}\n`;
+        lineas += `----------------------------------\n`;
         this.seleccionadosQuote.forEach((item) => {
             const bs = item.calcularPrecioBs(this.tasaActualCache);
             totalUsd += item.precioUsd;
@@ -315,7 +340,14 @@ export default class Cl_vPrecios {
         lineas += `💵 *TOTAL USD:* $${totalUsd.toFixed(2)}\n`;
         lineas += `🇻🇪 *TOTAL BS:* Bs. ${totalBs.toFixed(2)}\n`;
         lineas += `📊 *Tasa BCV del día:* Bs. ${this.tasaActualCache.toFixed(2)}\n\n`;
-        lineas += `_¡Gracias por su preferencia!_ 🛠️`;
+        lineas += `⚠️ *Nota:* Presupuesto sujeto a la tasa oficial del dólar del día en que se realice el pago (el monto en bolívares está sujeto a cambios diarios).\n\n`;
+        lineas += `----------------------------------\n`;
+        lineas += `💳 *Métodos de Pago Aceptados:*\n`;
+        lineas += `   • Efectivo\n`;
+        lineas += `   • Pago Móvil\n\n`;
+        lineas += `🔧 *Garantía:* 30 días sobre la reparación realizada.\n\n`;
+        lineas += `📍 *Ubicación:* Calle 33 con Carrera 23\n\n`;
+        lineas += `_¡Gracias por preferirnos!_ 🛠️`;
         const mensajeEncoded = encodeURIComponent(lineas);
         const urlWhatsApp = `https://api.whatsapp.com/send?text=${mensajeEncoded}`;
         try {

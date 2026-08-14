@@ -798,6 +798,39 @@ input:focus {
 .toast-error { border-left: 4px solid var(--error); }
 .toast-info { border-left: 4px solid var(--primario); }
 
+.cotizacion-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-limpiar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1.5px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-btn);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.btn-limpiar:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.6);
+  transform: scale(1.04);
+}
+
+.btn-limpiar:active {
+  transform: scale(0.97);
+}
+
 .footer-mobile {
   text-align: center;
   color: var(--texto-mutated);
