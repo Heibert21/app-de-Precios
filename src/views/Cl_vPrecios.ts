@@ -353,6 +353,7 @@ export default class Cl_vPrecios implements I_vPrecios {
     const totalBs = totalUsd * this.tasaActualCache;
 
     lineas += `----------------------------------\n`;
+    lineas += `🛠️ *TOTAL DE LA REPARACIÓN:*\n`;
     lineas += `💵 *TOTAL USD:* $${totalUsd.toFixed(2)}\n`;
     lineas += `🇻🇪 *TOTAL BS:* Bs. ${totalBs.toFixed(2)}\n`;
     lineas += `📊 *Tasa BCV del día:* Bs. ${this.tasaActualCache.toFixed(2)}\n\n`;
