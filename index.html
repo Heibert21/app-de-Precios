@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Precios de Reparación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- Contenedor de Toasts / Notificaciones -->
+  <div id="toast-container"></div>
+
+  <!-- Spinner de Carga Inicial -->
+  <div id="loader" class="loader-overlay">
+    <img src="https://i.pinimg.com/736x/e1/3e/bd/e13ebda86b3c3ce83bbf525af400d03a.jpg" alt="Logo Taller"
+      class="loader-logo" />
+    <div class="spinner"></div>
+    <p>Cargando Tasa Oficial BCV...</p>
+  </div>
+
+  <!-- Encabezado Mobile Fijo con Glassmorphism -->
+  <header class="mobile-header">
+    <div class="header-content">
+      <div class="header-top">
+        <div class="brand-container">
+          <img src="https://i.pinimg.com/736x/e1/3e/bd/e13ebda86b3c3ce83bbf525af400d03a.jpg" alt="Logo Taller"
+            class="header-logo" />
+          <h1>Precios de Reparación</h1>
+        </div>
+        <span class="live-badge"><span class="live-dot"></span> BCV En Vivo</span>
+      </div>
+      <div class="tasa-indicador">
+        <span class="tasa-label">Tasa Oficial del Día:</span>
+        <div class="tasa-accion">
+          <span id="tasa-valor" class="tasa-valor">Bs. ---</span>
+          <button type="button" id="btn-edit-tasa" class="btn-icon-tasa" title="Modificar Tasa Manualmente">✏️
+            Editar</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal Mobile -->
+  <main class="mobile-main">
+    <!-- Formulario para agregar producto/precio -->
+    <section class="card form-section">
+      <h2 id="titulo-form">📝 Registrar Precio de Reparación</h2>
+      <form id="form-precio" autocomplete="off">
+        <div class="input-group">
+          <label for="producto">Artículo a Reparar</label>
+          <input type="text" id="producto" placeholder="Ej. Cambio de Cierre, Costura..." inputmode="text"
+            enterkeyhint="next" required />
+        </div>
+        <div class="input-group">
+          <label for="precio-usd">Precio en Dólares ($)</label>
+          <div class="input-icon">
+            <span>$</span>
+            <input type="number" id="precio-usd" placeholder="0.00" step="0.01" min="0" inputmode="decimal"
+              enterkeyhint="done" required />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">
+          💾 Guardar Precio
+        </button>
+      </form>
+    </section>
+
+    <!-- Tarjeta Resumen de Totales y Estadísticas -->
+    <section class="card resumen-section">
+      <h2>📊 Resumen de Catálogo</h2>
+      <div class="resumen-grid">
+        <div class="resumen-box">
+          <span class="resumen-titulo">Cant. Servicios</span>
+          <span id="resumen-cant" class="resumen-valor">0</span>
+        </div>
+        <div class="resumen-box">
+          <span class="resumen-titulo">Total en USD</span>
+          <span id="resumen-usd" class="resumen-valor valor-usd">$0.00</span>
+        </div>
+        <div class="resumen-box">
+          <span class="resumen-titulo">Total en BS</span>
+          <span id="resumen-bs" class="resumen-valor valor-bs">Bs. 0.00</span>
+        </div>
+        <div class="resumen-box">
+          <span class="resumen-titulo">Promedio USD</span>
+          <span id="resumen-promedio" class="resumen-valor valor-info">$0.00</span>
+        </div>
+        <div class="resumen-box">
+          <span class="resumen-titulo">Precio Máx</span>
+          <span id="resumen-max" class="resumen-valor valor-usd">$0.00</span>
+        </div>
+        <div class="resumen-box">
+          <span class="resumen-titulo">Precio Mín</span>
+          <span id="resumen-min" class="resumen-valor valor-info">$0.00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lista de Precios Guardados + Filtros -->
+    <section class="card list-section">
+      <div class="list-header">
+        <div class="list-title">
+          <h2>📋 Lista de Precios</h2>
+          <span id="contador-items" class="badge">0</span>
+        </div>
+        <div class="list-actions">
+          <button type="button" id="btn-exportar-pdf" class="btn-accion-secundario"
+            title="Imprimir / Guardar Catálogo PDF">
+            🖨️ Exportar
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel de Búsqueda y Ordenamiento -->
+      <div class="controles-busqueda">
+        <div class="input-search-container">
+          <span class="search-icon">🔍</span>
+          <input type="search" id="buscar-input" placeholder="Buscar Artículo..." />
+        </div>
+        <div class="orden-container">
+          <label for="select-orden">Ordenar:</label>
+          <select id="select-orden" class="select-orden">
+            <option value="recientes">⏱️ Recientes primero</option>
+            <option value="precio-desc">💰 Precio: Mayor a Menor</option>
+            <option value="nombre-asc">🔤 Nombre: A -> Z</option>
+            <option value="nombre-desc">🔠 Nombre: Z -> A</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="lista-precios" class="precios-container">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">🏷️</div>
+          <p>Aún no hay precios guardados en el catálogo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Barra Flotante de Cotización Rápida / WhatsApp -->
+    <div id="cotizacion-bar" class="cotizacion-bar oculto">
+      <div class="cotizacion-info">
+        <span class="cotizacion-cant"><strong id="cotizacion-cant-num">0</strong> seleccionados</span>
+        <div class="cotizacion-totales">
+          <span id="cotizacion-total-usd" class="cotizacion-usd">$0.00</span>
+          <span id="cotizacion-total-bs" class="cotizacion-bs">Bs. 0.00</span>
+        </div>
+      </div>
+      <button type="button" id="btn-enviar-whatsapp" class="btn-whatsapp">
+        💬 Presupuesto a WhatsApp
+      </button>
+    </div>
+  </main>
+
+  <footer class="footer-mobile">
+    <p>© 2026 Taller de Reparaciones | Sistema de Precios MVC</p>
+  </footer>
+
+  <!-- Arranque MVC de la Aplicación -->
+  <script type="module">
+    import Cl_mAppPrecios from "./dist/models/Cl_mAppPrecios.js";
+    import Cl_vPrecios from "./dist/views/Cl_vPrecios.js";
+    import Cl_cPrecios from "./dist/controllers/Cl_cPrecios.js";
+
+    // Instanciamos el Modelo Global y la Vista
+    const modelo = new Cl_mAppPrecios();
+    const vista = new Cl_vPrecios();
+
+    // Arrancamos el controlador MVC
+    new Cl_cPrecios({ modelo, vista });
+  </script>
+</body>
+
+</html>
